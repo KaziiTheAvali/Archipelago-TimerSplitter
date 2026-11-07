@@ -2,6 +2,8 @@ from websockets.client import ClientConnection
 
 import settings
 import special_types
+import timer_connectors
+
 import asyncio
 import websockets
 import uuid
@@ -73,10 +75,10 @@ async def websocket_loop(server:str,port:str,settings_dict:dict) -> None:
                         if dictitem["cmd"] == "RoomInfo":
                             uuidstr = str(player_uuid)
                             if dictitem["password"]:
-                                connection_packet = make_connection_packet(uuidstr, settings_dict["username"], websocket,
+                                connection_packet:str = make_connection_packet(uuidstr, settings_dict["username"], websocket,
                                                                            settings_dict["password"])
                             else:
-                                connection_packet = make_connection_packet(uuidstr,
+                                connection_packet:str = make_connection_packet(uuidstr,
                                                                            settings_dict["username"], websocket,)
                             await websocket.send(connection_packet)
                             print(f"connection packet sent = {connection_packet}")
@@ -88,10 +90,21 @@ async def websocket_loop(server:str,port:str,settings_dict:dict) -> None:
                             if "type" in dictitem:
                                 if dictitem["type"] == "Countdown":
                                         if dictitem["countdown"] == 0:
-                                            ...
+                                            if settings_dict["speedrunType"] == "OSR":
+                                                timer_connectors.send_osr_command("start",
+                                                                                  settings_dict["openSpeedrunSocket"])
+                                            else:
+                                                timer_connectors.send_livesplit_command("starttimer",
+                                                                                        settings_dict["livesplitHost"],
+                                                                                        int(settings_dict[
+                                                                                                "livesplitPort"]))
                                 if dictitem["type"] == "Goal":
                                     if dictitem["team"] == team and dictitem["slot"] == slot:
-                                        ...
+                                        if settings_dict["speedrunType"] == "OSR":
+                                            timer_connectors.send_osr_command("split",
+                                                                              settings_dict["openSpeedrunSocket"])
+                                        else:
+                                            timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
 
 
 

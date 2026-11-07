@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from platformdirs import user_config_path
+import special_types
 
 class NonsupportedSetting(Exception):
     ...
@@ -15,18 +16,21 @@ def load_json_settings(file_path: Path|None = None) -> dict:
 
     if not file_path.is_file():
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        settings_dict:dict = {
-            "server": "archipelago.gg",
-            "port": "12345",
-            "password": "None",
-            "username": "Kazii",
-            "speedrunType": "OSR",
-            "speedrunSocket": "/run/user/1000/openspeedrun.sock"
-        }
+        settings_dict:dict = special_types.settings_dict
         save_json_file(settings_dict,file_path)
         return settings_dict
     with open(file_path, "r") as file:
         settings_dict:dict = json.load(file)
+    return settings_dict
+
+def reload_json_settings(file_path: Path|None = None) -> dict:
+    if file_path is None:
+        base_file_path: Path = user_config_path(appname="Archipelago Speedrun Splitter", appauthor="Kazii")
+        file_path = base_file_path / "connection.json"
+    if not file_path.is_file():
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+    settings_dict:dict = special_types.settings_dict
+    save_json_file(settings_dict,file_path)
     return settings_dict
 
 
@@ -61,7 +65,7 @@ def save_json_file(json_dict:dict, file_path:Path) -> None:
 
 
 def main() -> None:
-    print(load_json_settings())
+    print(reload_json_settings())
 
 if __name__ == '__main__':
     main()
