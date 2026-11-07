@@ -4,7 +4,7 @@ you may need to run it once to generate the settings file and then run it after 
 arguments dont work atm
 
 # SETTINGS
-settings are at "Appdata\Local\Kazii\Archipelago Speedrun Splitter" on windows or "~/.config/Archipelago Speedrun Splitter on linux" a way to change these from the application will be done in the future. 
+settings are at "Appdata\Local\Kazii\Archipelago Speedrun Splitter" on windows or "~/.config/Archipelago Speedrun Splitter" on linux a way to change these from the application will be done in the future. 
 
 server: the archipelago server you want to connect to( ie localhost, archipelago.gg)
 port: the port number you want to connect to
