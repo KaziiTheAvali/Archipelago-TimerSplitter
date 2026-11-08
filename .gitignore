@@ -86,3 +86,5 @@
 /dist/main/_internal/websockets-17.4.dist-info/WHEEL
 /build/main/xref-main.html
 /dist/main/_internal/python3.14/lib-dynload/zlib.cpython-314-x86_64-linux-gnu.so
+/dist/
+/build/
