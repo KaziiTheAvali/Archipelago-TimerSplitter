@@ -14,7 +14,7 @@ import uuid
 import argparse
 import json
 import os
-
+uwu:str="uwu"
 
 def make_connection_packet(player_uuid:str,name:str,password:str|None=None) -> str: #this makes the package that is sent to the server when connecting
     version:dict=special_types.version #gets the version from specal_types. that file name should be changed because its not really types but shh
@@ -139,9 +139,142 @@ def clear_screen() -> None:
     else:
         subprocess.run('clear')
 
+def config_lsp_menu(json_settings:dict)-> None:
+    while True:
+        clear_screen()
+        setting: str = input("input what Livesplit port you are using. this must be a number. type E to go back :")
+        if setting == "e":
+            break
+        try:
+            int(setting)
+            settings.save_setting_to_json("livesplitPort", json_settings, setting)
+            break
+        except ValueError as error:
+            print(f"the port has to be a number in string format.")
 
-def main_menu()-> None:
-    ...
+    config_menu()
+
+
+def config_lss_menu(json_settings:dict)-> None:
+    clear_screen()
+    setting:str=input("Input the Live split server. type E to go back :").lower()
+    if not setting=="e":
+        settings.save_setting_to_json("livesplitHost",json_settings,setting)
+    config_menu()
+
+def config_osrs_menu(json_setting:dict)-> None:
+    clear_screen()
+    setting:str=input("Input where the open speedrun timer's socket resides. type E to go back :")
+    if not setting=="e" or setting=="E":
+        settings.save_setting_to_json("openSpeedrunSocket",json_setting,setting)
+    config_menu()
+
+def config_tt_menu(json_setting:dict) -> None:
+    clear_screen()
+    setting:str=input("Input which timer you are using. OSR or LiveSplit. type E to go back :").lower()
+    match setting:
+        case "osr":
+            settings.save_setting_to_json("speedrunType",json_setting,"OSR")
+        case "livesplit":
+            settings.save_setting_to_json("speedrunType",json_setting,"LiveSplit")
+        case _:
+            ...
+    config_menu()
+
+def config_usr_menu(json_setting:dict) -> None:
+    clear_screen()
+    setting:str=input("input what slotname you are using. type E to go back :")
+    if not setting=="e" or setting=="E":
+        settings.save_setting_to_json("username",json_setting,setting)
+    config_menu()
+
+def config_pw_menu(json_settings:dict)-> None:
+    clear_screen()
+    setting:str=input("input what archipelago password you are using if any. type E to go back :")
+    if not setting=="e" or setting=="E":
+        settings.save_setting_to_json("password",json_settings,setting)
+    config_menu()
+
+
+def config_app_menu(json_settings:dict)-> None:
+    while True:
+        clear_screen()
+        setting:str=input("input what archipelago port you are using. this must be a number. type E to go back :")
+        if setting=="e":
+            break
+        try:
+            int(setting)
+            settings.save_setting_to_json("port",json_settings,setting)
+            break
+        except ValueError as error:
+            print(f"the port has to be a number in string format.")
+
+    config_menu()
+
+
+def config_aps_menu(json_settings:dict)-> None:
+    clear_screen()
+    setting:str=input("input what archipelago server you are using. ie: archipelago.gg. type E to go back :").lower()
+    if not setting=="e":
+        settings.save_setting_to_json("server",json_settings,setting)
+    config_menu()
+
+
+def config_menu() -> None:
+    json_settings:dict=settings.load_json_settings()
+    clear_screen()
+    print(f"Type APS or APServer to change the archipelago server")
+    print(f"Type APP or APPort to change the archipelago port")
+    print(f"Type PW or Password to change the password")
+    print(f"Type Usr or Username to change the username")
+    print(f"Type TT or TimerType to change the type of the timer")
+    print(f"Type OSRS or OpenSpeedRunSocket to change the socket")
+    print(f"Type LSS or LiveSplitServer to change the live split server")
+    print(f"Type LSP or LiveSplitPort to change the live split port")
+    print(f"Type E, or Exit to go back to the main menu")
+    print(f"Type Q  or Quit to quit")
+    command:str= input("input :").lower()
+
+    match command:
+        case "aps" | "apserver":
+            config_aps_menu(json_settings)
+        case "app" | "apport":
+            config_app_menu(json_settings)
+        case "pw" | "password":
+            config_pw_menu(json_settings)
+        case "usr" |"username":
+            config_usr_menu(json_settings)
+        case "tt" | "timertype":
+            config_tt_menu(json_settings)
+        case "osrs"| "openspeedrunsocket":
+            config_osrs_menu(json_settings)
+        case "lss" | "livesplitserver":
+            config_lss_menu(json_settings)
+        case "lsp" | "livesplitport":
+            config_lsp_menu(json_settings)
+        case "e" | "exit":
+            main_menu()
+        case _:
+            print("Goodbye")
+
+
+def main_menu()-> None: #could totally use some need text scrolling effect but that is a lot of work for like no effort.
+    clear_screen()
+    print(f"Type S or Start to start the application server")
+    print(f"Type C,Config, or Settings to go to the settings menu")
+    print(f"Type Q or Quit to exit the application")
+    command:str= input("input: ").lower()
+
+    match command:
+        case "s" | "start":
+            start_server()
+        case "c" | "config" | "settings":
+            config_menu()
+        case _:
+            print("Goodbye")
+
+
+
 
 
 
@@ -188,12 +321,12 @@ def main() -> None:
                          except ValueError as error:
                              print(f"the port has to be a number in string format.")
 
-                     else
+                     else:
                          current_settings=settings.save_setting_to_json(key,current_settings,value)
 
 
 
-    start_server()#just so it doesnt break while testing.
+    main_menu()#just so it doesnt break while testing.
 
 
 
