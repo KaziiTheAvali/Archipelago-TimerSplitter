@@ -1,3 +1,5 @@
+import ssl
+
 from websockets.client import ClientConnection
 
 import settings
@@ -59,13 +61,12 @@ def make_empty_datapackage() -> str:
 async def websocket_loop(server:str,port:str,settings_dict:dict) -> None:
     full_uri:str="wss://" + server +":"+ port
     player_uuid=uuid.uuid4()
-    continuous:bool=True
-    connected:bool=False
-    step:int=0
+    secure:bool=True
     slot:int
     team:int
     while True:
         try:
+            print(f"trying to connect with {full_uri}")
             async with websockets.connect(full_uri) as websocket:
 
                 async for message in websocket:
@@ -110,8 +111,17 @@ async def websocket_loop(server:str,port:str,settings_dict:dict) -> None:
 
 
 
-        except (websockets.ConnectionClosedError, OSError) as e:
-            print(f"Connection lost ({e}). Reconnecting in 3 seconds...")
+        except ssl.SSLError as error:
+            if "WRONG_VERSION_NUMBER" in str(error):
+                if secure:
+                    full_uri: str = "ws://" + server + ":" + port
+                    secure=False
+                else:
+                    full_uri: str = "wss://" + server + ":" + port
+                    secure = True
+        except (websockets.ConnectionClosedError, OSError) as error:
+
+            print(f"Connection lost ({error}). Reconnecting in 3 seconds...")
             await asyncio.sleep(3)
 
 
