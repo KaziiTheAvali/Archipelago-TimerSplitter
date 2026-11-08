@@ -1,10 +1,8 @@
-HOW TO RUN:
-
+# HOW TO RUN:
 open the binary with your terminal of choise. konsole and command prompt are two main ones.
 
 To connect to livesplit you have to open a TCP connection. i do not have a websocket connection for livesplit working yet.
-SETTINGS
-
+# SETTINGS
 settings are at "Appdata\Local\Kazii\Archipelago Speedrun Splitter" on windows or "~/.config/Archipelago Speedrun Splitter" on linux. you can also change them inside of the settings.
 
 server: the archipelago server you want to connect to( ie localhost, archipelago.gg)
