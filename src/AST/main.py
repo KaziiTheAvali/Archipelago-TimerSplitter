@@ -227,7 +227,7 @@ def config_menu() -> None:
     print(f"Type APP or APPort to change the archipelago port")
     print(f"Type PW or Password to change the password")
     print(f"Type Usr or Username to change the username")
-    print(f"Type TT or TimerType to change the type of the timer")
+    print(f"Type TT or TimerType to change which timer your using")
     print(f"Type OSRS or OpenSpeedRunSocket to change the socket")
     print(f"Type LSS or LiveSplitServer to change the live split server")
     print(f"Type LSP or LiveSplitPort to change the live split port")
