@@ -61,7 +61,8 @@ def make_empty_datapackage() -> str: #unused atm.
 
 
 
-async def websocket_loop(server:str,port:str,settings_dict:dict) -> None:
+async def websocket_loop(server:str,port:str|int,settings_dict:dict) -> None:
+    port=str(port)
     full_uri:str="wss://" + server +":"+ port #default is secure.
     player_uuid=uuid.uuid4() #i never knew what the intended uuid thing was so just gen this shit
     secure:bool=True
@@ -103,12 +104,20 @@ async def websocket_loop(server:str,port:str,settings_dict:dict) -> None:
                                                                                         int(settings_dict[
                                                                                                 "livesplitPort"]))
                                 if dictitem["type"] == "Goal": #checks if someone has goaled
-                                    if dictitem["team"] == team and dictitem["slot"] == slot: #checks the team and slot. yet again errors if this isnt the goal type
-                                        if settings_dict["speedrunType"] == "OSR": #linux
-                                            timer_connectors.send_osr_command("split",
-                                                                              settings_dict["openSpeedrunSocket"])
-                                        else:#windows
-                                            timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
+                                    if settings_dict["SplitOnAllGoals"]:
+                                        if dictitem["team"] == team: #coppy paste job
+                                            if settings_dict["speedrunType"] == "OSR": #linux
+                                                timer_connectors.send_osr_command("split",
+                                                                                  settings_dict["openSpeedrunSocket"])
+                                            else:#windows
+                                                timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
+                                    else:
+                                        if dictitem["team"] == team and dictitem["slot"] == slot: #checks the team and slot. yet again errors if this isnt the goal type
+                                            if settings_dict["speedrunType"] == "OSR": #linux
+                                                timer_connectors.send_osr_command("split",
+                                                                                  settings_dict["openSpeedrunSocket"])
+                                            else:#windows
+                                                timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
 
 
 
@@ -219,6 +228,10 @@ def config_aps_menu(json_settings:dict)-> None:
         settings.save_setting_to_json("server",json_settings,setting)
     config_menu()
 
+def config_tst_swap(json_settings:dict)-> None:
+    reverse_soag = not json_settings["SplitOnAllGoals"]
+    settings.save_setting_to_json("SplitOnAllGoals", json_settings, reverse_soag)
+    config_menu()
 
 def config_menu() -> None:
     json_settings:dict=settings.load_json_settings()
@@ -231,6 +244,7 @@ def config_menu() -> None:
     print(f"Type OSRS or OpenSpeedRunSocket to change the socket")
     print(f"Type LSS or LiveSplitServer to change the live split server")
     print(f"Type LSP or LiveSplitPort to change the live split port")
+    print(f"Type tst or ToggleSplitType to change weather you split on single goal or on all goals of your team")
     print(f"Type E, or Exit to go back to the main menu")
     print(f"Type Q  or Quit to quit")
     command:str= input("input :").lower()
@@ -252,6 +266,9 @@ def config_menu() -> None:
             config_lss_menu(json_settings)
         case "lsp" | "livesplitport":
             config_lsp_menu(json_settings)
+        case "tst" | "togglesplittype":
+            config_tst_swap(json_settings)
+
         case "e" | "exit":
             main_menu()
         case _:
@@ -292,7 +309,7 @@ def main() -> None:
     parser.add_argument("--splitterType",type=str, help="changes the setting via command line. use OSR for open speedrun or LiveSplit for linux")
     parser.add_argument("--OSRSocket",type=str, help="changes the socket path via command line")
     parser.add_argument("--livesplitHost",type=str,help="changes the livesplit host name setting via command line")
-    parser.add_argument("--livesplitPort",type=str,help="changes the livesplit port setting via the command line, needs to be a whole number in string format")
+    parser.add_argument("--livesplitPort",type=str,help="changes the livesplit port setting via the command line, needs to be a whole number")
     #no version argument because you can not manually change the version
 
 
@@ -311,7 +328,7 @@ def main() -> None:
         else:
              for key, value in vars(args).items():
                  print(f"key = {key}, value = {value}")
-                 if not value == None:
+                 if not value is None:
                      if key == 'port' or key == 'livesplitPort': #make shure the user actually inputted something reasonable as a port
                          #we dont want no 'fuck' as a port number
                          try:

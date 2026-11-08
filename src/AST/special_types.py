@@ -9,7 +9,8 @@ settings_dict:dict = { #this is the deffault settings.
     "openSpeedrunSocket": "/run/user/1000/openspeedrun.sock", #only used for openspeedrun
     "livesplitHost": "localhost",
     "livesplitPort": "16834", #this is from what i know the default port and host for livesplit
-    "SettingsVersion": "0.0.2" #this is not garenteed to update with the app. this is more for the settings itself.
+    "SplitOnAllGoals" : False,
+    "SettingsVersion": "0.0.3" #this is not garenteed to update with the app. this is more for the settings itself.
 }
 
 version:dict = { #the version. this is what is asked for by the documentation.

@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from platformdirs import user_config_path
 import special_types
+from typing import Any
 
 class NonsupportedSetting(Exception):
     ...
@@ -53,7 +54,7 @@ def update_json_settings(json_data:dict, file_path: Path|None = None) -> dict: #
 
 
 
-def save_setting_to_json(setting: str,  json_data:dict, value:str, file_path: Path|None = None) -> dict: #saves a single setting.
+def save_setting_to_json(setting: str,  json_data:dict, value:Any, file_path: Path|None = None) -> dict: #saves a single setting.
     try:
         accepted_settings=special_types.settings_dict.keys() #the accepted settings. cant figure out how to static type this :(
                                                              #unshure why i did it this way. like im pritty shure you can just check normally but ohwell
@@ -61,9 +62,10 @@ def save_setting_to_json(setting: str,  json_data:dict, value:str, file_path: Pa
             base_file_path: Path = user_config_path(appname="Archipelago Speedrun Splitter", appauthor="Kazii")
             file_path = base_file_path / "connection.json"
         if setting in accepted_settings:
-            new_json_data:dict = json_data
-            new_json_data[setting]=value
-            save_json_file(new_json_data,file_path)
+            new_json_data: dict = json_data
+            if setting=="SplitOnAllGoals" and type(value) is bool or setting!="SplitOnAllGoals":
+                new_json_data[setting]=value
+                save_json_file(new_json_data,file_path)
             return new_json_data
         else :
             print(f"The setting {setting} is not found. please make shure it is a valid setting from the following:"
