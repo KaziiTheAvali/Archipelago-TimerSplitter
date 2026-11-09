@@ -14,7 +14,7 @@ import uuid
 import argparse
 import json
 import os
-uwu:str="uwu"
+
 
 def make_connection_packet(player_uuid:str,name:str,password:str|None=None) -> str: #this makes the package that is sent to the server when connecting
     version:dict=special_types.version #gets the version from specal_types. that file name should be changed because its not really types but shh
