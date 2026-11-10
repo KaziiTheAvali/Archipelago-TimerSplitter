@@ -148,10 +148,17 @@ def clear_screen() -> None:
     else:
         subprocess.run('clear')
 
+def current_settings(json_settings:dict)-> None:
+    clear_screen()
+    for key, value in json_settings.items():
+        print(f"the current setting for {key} is {value}")
+    input("press enter to continue")
+    config_menu()
+
 def config_lsp_menu(json_settings:dict)-> None:
     while True:
         clear_screen()
-        setting: str = input("input what Livesplit port you are using. this must be a number. type E to go back :")
+        setting: str = input(f"input what Livesplit port you are using. this must be a number.the current setting is {json_settings["livesplitPort"]}. type E to go back :")
         if setting == "e":
             break
         try:
@@ -166,21 +173,21 @@ def config_lsp_menu(json_settings:dict)-> None:
 
 def config_lss_menu(json_settings:dict)-> None:
     clear_screen()
-    setting:str=input("Input the Live split server. type E to go back :").lower()
+    setting:str=input(f"Input the Live split server.the current setting is {json_settings["livesplitHost"]} type E to go back :").lower()
     if not setting=="e":
         settings.save_setting_to_json("livesplitHost",json_settings,setting)
     config_menu()
 
 def config_osrs_menu(json_setting:dict)-> None:
     clear_screen()
-    setting:str=input("Input where the open speedrun timer's socket resides. type E to go back :")
+    setting:str=input(f"Input where the open speedrun timer's socket resides.the current setting is {json_setting["openSpeedrunSocket"]} type E to go back :")
     if not setting=="e" or setting=="E":
         settings.save_setting_to_json("openSpeedrunSocket",json_setting,setting)
     config_menu()
 
 def config_tt_menu(json_setting:dict) -> None:
     clear_screen()
-    setting:str=input("Input which timer you are using. OSR or LiveSplit. type E to go back :").lower()
+    setting:str=input(f"Input which timer you are using. OSR or LiveSplit.the current setting is {"speedrunType"}. type E to go back :").lower()
     match setting:
         case "osr":
             settings.save_setting_to_json("speedrunType",json_setting,"OSR")
@@ -192,14 +199,14 @@ def config_tt_menu(json_setting:dict) -> None:
 
 def config_usr_menu(json_setting:dict) -> None:
     clear_screen()
-    setting:str=input("input what slotname you are using. type E to go back :")
+    setting:str=input(f"input what slotname you are using.the current username is {json_setting["username"]}. type E to go back :")
     if not setting=="e" or setting=="E":
         settings.save_setting_to_json("username",json_setting,setting)
     config_menu()
 
 def config_pw_menu(json_settings:dict)-> None:
     clear_screen()
-    setting:str=input("input what archipelago password you are using if any. type E to go back :")
+    setting:str=input(f"input what archipelago password you are using if any.the current setting for {json_settings["password"]}. type E to go back :")
     if not setting=="e" or setting=="E":
         settings.save_setting_to_json("password",json_settings,setting)
     config_menu()
@@ -208,7 +215,7 @@ def config_pw_menu(json_settings:dict)-> None:
 def config_app_menu(json_settings:dict)-> None:
     while True:
         clear_screen()
-        setting:str=input("input what archipelago port you are using. this must be a number. type E to go back :")
+        setting:str=input(f"input what archipelago port you are using. this must be a number. current setting is {json_settings["port"]}. type E to go back :")
         if setting=="e":
             break
         try:
@@ -223,7 +230,7 @@ def config_app_menu(json_settings:dict)-> None:
 
 def config_aps_menu(json_settings:dict)-> None:
     clear_screen()
-    setting:str=input("input what archipelago server you are using. ie: archipelago.gg. type E to go back :").lower()
+    setting:str=input(f"input what archipelago server you are using. ie: archipelago.gg. current setting is {json_settings["server"]}. type E to go back :").lower()
     if not setting=="e":
         settings.save_setting_to_json("server",json_settings,setting)
     config_menu()
@@ -233,9 +240,10 @@ def config_tst_swap(json_settings:dict)-> None:
     settings.save_setting_to_json("SplitOnAllGoals", json_settings, reverse_soag)
     config_menu()
 
-def config_menu() -> None:
+def config_menu(do_clear_screen:bool = True) -> None:
     json_settings:dict=settings.load_json_settings()
-    clear_screen()
+    if do_clear_screen:
+        clear_screen()
     print(f"Type APS or APServer to change the archipelago server")
     print(f"Type APP or APPort to change the archipelago port")
     print(f"Type PW or Password to change the password")
@@ -245,6 +253,7 @@ def config_menu() -> None:
     print(f"Type LSS or LiveSplitServer to change the live split server")
     print(f"Type LSP or LiveSplitPort to change the live split port")
     print(f"Type tst or ToggleSplitType to change weather you split on single goal or on all goals of your team")
+    print(f"Type CS or CurrentSettings to see your current settings")
     print(f"Type E, or Exit to go back to the main menu")
     print(f"Type Q  or Quit to quit")
     command:str= input("input :").lower()
@@ -268,7 +277,8 @@ def config_menu() -> None:
             config_lsp_menu(json_settings)
         case "tst" | "togglesplittype":
             config_tst_swap(json_settings)
-
+        case "cs" | "currentsettings":
+            current_settings(json_settings)
         case "e" | "exit":
             main_menu()
         case _:
