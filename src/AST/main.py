@@ -1,12 +1,14 @@
 import ssl
 import subprocess
 import sys
+from asyncio import Task, AbstractEventLoop
 
 from websockets.client import ClientConnection #this was an auto import. probably not needed. thanks fucking pycharm
 
 import settings
 import special_types
 import timer_connectors
+import threading
 
 import asyncio
 import websockets
@@ -56,68 +58,89 @@ def make_empty_datapackage() -> str: #unused atm.
 
     return json.dumps(datapackage)
 
+def should_stop(stop_event: threading.Event | bool) -> bool:
+    print(stop_event)
+    if isinstance(stop_event, threading.Event):
+        return not stop_event.is_set()
+    return bool(stop_event)
+
+async def _watch_for_stop_event(stop_event:threading.Event,websocket):
+    loop:AbstractEventLoop = asyncio.get_running_loop()
+    await loop.run_in_executor(None,stop_event.wait) #dont know why warning. should work fine.
+    await websocket.close()
 
 
-
-
-
-async def websocket_loop(server:str,port:str|int,settings_dict:dict) -> None:
+async def websocket_loop(server:str,port:str|int,settings_dict:dict,stop_event:threading.Event | bool=True) -> None:
     port=str(port)
     full_uri:str="wss://" + server +":"+ port #default is secure.
     player_uuid=uuid.uuid4() #i never knew what the intended uuid thing was so just gen this shit
     secure:bool=True
     slot:int#will be filled with the actual slot and team number
     team:int
-    while True:
+    print(stop_event)
+    while should_stop(stop_event):
         try:
             print(f"trying to connect with {full_uri}")
             async with websockets.connect(full_uri) as websocket:
-                #connected!
-                async for message in websocket: #checks for messages that are sent.
-                    print(f"Message= {message}") #dev shit. will remove later
-                    data:list = json.loads(message) #this just makes it useable
-                    for dictitem in data:
-                        if dictitem["cmd"] == "RoomInfo": #waiting for the first message. this is required to actually connect
-                            uuidstr = str(player_uuid)
-                            if dictitem["password"]:
-                                connection_packet:str = make_connection_packet(uuidstr, settings_dict["username"],
-                                                                           settings_dict["password"])
-                            else:
-                                connection_packet:str = make_connection_packet(uuidstr,
-                                                                           settings_dict["username"],)
-                            await websocket.send(connection_packet)
-                            print(f"connection packet sent = {connection_packet}")
-                        if dictitem["cmd"] == "Connected": #hey i am actually connected everything is good!. get the team and slot numbers and put them in
-                            team=dictitem["team"]
-                            slot=dictitem["slot"]
+                if isinstance(stop_event, threading.Event): #a bit of a patch job. its fucking jank but it works.
+                    watcher:Task = asyncio.create_task(_watch_for_stop_event(stop_event,websocket))
 
-                        if dictitem["cmd"] == "PrintJSON": #the server sends printjson for the majority of stuff. all the things i need is here
-                            if "type" in dictitem:
-                                if dictitem["type"] == "Countdown": #check for the countdown
-                                        if dictitem["countdown"] == 0: #checks if it is 0 (will for some reason error if it is with the other when type is not equal to countdown)
-                                            if settings_dict["speedrunType"] == "OSR": #the linux side of things
-                                                timer_connectors.send_osr_command("start",
-                                                                                  settings_dict["openSpeedrunSocket"])
-                                            else:
-                                                timer_connectors.send_livesplit_command("starttimer", #the windows side of things
-                                                                                        settings_dict["livesplitHost"],
-                                                                                        int(settings_dict[
-                                                                                                "livesplitPort"]))
-                                if dictitem["type"] == "Goal": #checks if someone has goaled
-                                    if settings_dict["SplitOnAllGoals"]:
-                                        if dictitem["team"] == team: #coppy paste job
-                                            if settings_dict["speedrunType"] == "OSR": #linux
-                                                timer_connectors.send_osr_command("split",
-                                                                                  settings_dict["openSpeedrunSocket"])
-                                            else:#windows
-                                                timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
-                                    else:
-                                        if dictitem["team"] == team and dictitem["slot"] == slot: #checks the team and slot. yet again errors if this isnt the goal type
-                                            if settings_dict["speedrunType"] == "OSR": #linux
-                                                timer_connectors.send_osr_command("split",
-                                                                                  settings_dict["openSpeedrunSocket"])
-                                            else:#windows
-                                                timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
+                #connected!
+                try:
+                    async for message in websocket:
+                        print(stop_event)#checks for messages that are sent.
+                        print(f"Message= {message}") #dev shit. will remove later
+                        data:list = json.loads(message) #this just makes it useable
+                        for dictitem in data:
+                            if dictitem["cmd"] == "RoomInfo": #waiting for the first message. this is required to actually connect
+                                uuidstr:str = str(player_uuid)
+                                if dictitem["password"]:
+                                    connection_packet:str = make_connection_packet(uuidstr, settings_dict["username"],
+                                                                               settings_dict["password"])
+                                else:
+                                    connection_packet:str = make_connection_packet(uuidstr,
+                                                                               settings_dict["username"],)
+                                await websocket.send(connection_packet)
+                                print(f"connection packet sent = {connection_packet}")
+                            if dictitem["cmd"] == "Connected": #hey i am actually connected everything is good!. get the team and slot numbers and put them in
+                                team=dictitem["team"]
+                                slot=dictitem["slot"]
+
+                            if dictitem["cmd"] == "PrintJSON": #the server sends printjson for the majority of stuff. all the things i need is here
+                                if "type" in dictitem:
+                                    if dictitem["type"] == "Countdown": #check for the countdown
+                                            if dictitem["countdown"] == 0: #checks if it is 0 (will for some reason error if it is with the other when type is not equal to countdown)
+                                                if settings_dict["speedrunType"] == "OSR": #the linux side of things
+                                                    timer_connectors.send_osr_command("start",
+                                                                                      settings_dict["openSpeedrunSocket"])
+                                                else:
+                                                    timer_connectors.send_livesplit_command("starttimer", #the windows side of things
+                                                                                            settings_dict["livesplitHost"],
+                                                                                            int(settings_dict[
+                                                                                                    "livesplitPort"]))
+                                    if dictitem["type"] == "Goal": #checks if someone has goaled
+                                        if settings_dict["SplitOnAllGoals"]:
+                                            if dictitem["team"] == team: #coppy paste job
+                                                if settings_dict["speedrunType"] == "OSR": #linux
+                                                    timer_connectors.send_osr_command("split",
+                                                                                      settings_dict["openSpeedrunSocket"])
+                                                else:#windows
+                                                    timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
+                                        else:
+                                            if dictitem["team"] == team and dictitem["slot"] == slot: #checks the team and slot. yet again errors if this isnt the goal type
+                                                if settings_dict["speedrunType"] == "OSR": #linux
+                                                    timer_connectors.send_osr_command("split",
+                                                                                      settings_dict["openSpeedrunSocket"])
+                                                else:#windows
+                                                    timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
+                finally:
+                    try:
+                        watcher
+                    except NameError:
+                        ...
+                    else:
+                        watcher.cancel()
+
 
 
 
@@ -132,15 +155,18 @@ async def websocket_loop(server:str,port:str|int,settings_dict:dict) -> None:
                 else:
                     full_uri: str = "wss://" + server + ":" + port
                     secure = True
+        except (websockets.ConnectionClosed):
+            print("close connection")
         except (websockets.ConnectionClosedError, OSError) as error:
 
             print(f"Connection lost ({error}). Reconnecting in 3 seconds...")# my capitilization consistancy is horrendous
             await asyncio.sleep(3)
+        print(stop_event)
 
 
-def start_server() -> None:
+def start_server(stop_event:threading.Event|bool=True) -> None:
     settings_dict: dict = settings.load_json_settings()
-    asyncio.run(websocket_loop(settings_dict["server"], settings_dict["port"], settings_dict))
+    asyncio.run(websocket_loop(settings_dict["server"], settings_dict["port"], settings_dict,stop_event))
 
 def clear_screen() -> None:
     if os.name=='nt':
@@ -325,11 +351,13 @@ def main() -> None:
 
     args:argparse.Namespace = parser.parse_args() #avrage arg parser section/
 
-    current_settings:dict = settings.load_json_settings()
+    current_settings_main:dict = settings.load_json_settings()
 
-    if not current_settings["SettingsVersion"] == special_types.settings_dict["SettingsVersion"]:
-        current_settings=settings.update_json_settings(current_settings)
+    if not current_settings_main["SettingsVersion"] == special_types.settings_dict["SettingsVersion"]:
+        current_settings_main=settings.update_json_settings(current_settings_main)
         print("settings update has been added")
+
+         #starts the server bypassing everything. since the gui would probably have that covered.
 
 
     if not len(sys.argv) == 1:#if there is not args you can just go straight to the (eventual) cli menu
@@ -343,13 +371,13 @@ def main() -> None:
                          #we dont want no 'fuck' as a port number
                          try:
                              int(value)
-                             current_settings=settings.save_setting_to_json(key,current_settings,value)
+                             current_settings_main=settings.save_setting_to_json(key, current_settings_main, value)
 
                          except ValueError as error:
                              print(f"the port has to be a number in string format.")
 
                      else:
-                         current_settings=settings.save_setting_to_json(key,current_settings,value)
+                         current_settings_main=settings.save_setting_to_json(key, current_settings_main, value)
 
 
 
