@@ -153,11 +153,11 @@ save_btn.pack(side=tk.RIGHT)
 reset_btn:tkinter.Button=tk.Button(buttons_frame,text="Reset Settings",command=reset_settings)
 reset_btn.pack(side=tk.RIGHT)
 
-stop_btn:tkinter.Button=tk.Button(buttons_frame,text="Stop Server",command=stop_server)
-stop_btn.pack(side=tk.LEFT)
-
 start_btn:tkinter.Button=tk.Button(buttons_frame,text="Save and start", command=start_server)
 start_btn.pack(side=tk.LEFT)
+
+stop_btn:tkinter.Button=tk.Button(buttons_frame,text="Stop Server",command=stop_server)
+stop_btn.pack(side=tk.LEFT)
 
 konsol_label:tkinter.Label=tk.Label(buttons_frame,text="LogBox",font=("Arial", 10, "bold"))
 konsol_label.pack(side="bottom", pady=(0,5))

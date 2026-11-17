@@ -64,6 +64,7 @@ def should_stop(stop_event: threading.Event | bool) -> bool:
         return not stop_event.is_set()
     return bool(stop_event)
 
+#got very mad at getting a stop event working. idk why it didnt want to work for so long
 async def _watch_for_stop_event(stop_event:threading.Event,websocket):
     loop:AbstractEventLoop = asyncio.get_running_loop()
     await loop.run_in_executor(None,stop_event.wait) #dont know why warning. should work fine.
