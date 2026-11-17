@@ -52,11 +52,11 @@ def make_connection_packet(player_uuid:str,name:str,password:str|None=None) -> s
 
     return  json.dumps(connection_packet)
 
-def make_empty_datapackage() -> str: #unused atm.
-    datapackages:list[str]=[""]
-    datapackage:list=[{"cmd": "GetDataPackage","games":datapackages}]
-
-    return json.dumps(datapackage)
+def make_datapackage(games:list[str]) -> str:
+    return json.dumps([{
+        "cmd":"GetDataPackage",
+        "games":games
+    }])
 
 def should_stop(stop_event: threading.Event | bool) -> bool:
     print(stop_event)
@@ -73,6 +73,8 @@ async def _watch_for_stop_event(stop_event:threading.Event,websocket):
 
 async def websocket_loop(server:str,port:str|int,settings_dict:dict,stop_event:threading.Event | bool=True) -> None:
     port=str(port)
+    needsPassword:bool=False
+    datapackage:dict={}
     full_uri:str="wss://" + server +":"+ port #default is secure.
     player_uuid=uuid.uuid4() #i never knew what the intended uuid thing was so just gen this shit
     secure:bool=True
@@ -93,47 +95,72 @@ async def websocket_loop(server:str,port:str|int,settings_dict:dict,stop_event:t
                         print(f"Message= {message}") #dev shit. will remove later
                         data:list = json.loads(message) #this just makes it useable
                         for dictitem in data:
-                            if dictitem["cmd"] == "RoomInfo": #waiting for the first message. this is required to actually connect
-                                uuidstr:str = str(player_uuid)
-                                if dictitem["password"]:
-                                    connection_packet:str = make_connection_packet(uuidstr, settings_dict["username"],
-                                                                               settings_dict["password"])
-                                else:
-                                    connection_packet:str = make_connection_packet(uuidstr,
-                                                                               settings_dict["username"],)
-                                await websocket.send(connection_packet)
-                                print(f"connection packet sent = {connection_packet}")
-                            if dictitem["cmd"] == "Connected": #hey i am actually connected everything is good!. get the team and slot numbers and put them in
-                                team=dictitem["team"]
-                                slot=dictitem["slot"]
+                            command:str=dictitem["cmd"]
+                            match command:
+                                case "RoomInfo":
+                                    needs_password=dictitem["password"]
+                                    datapackagestr:str=make_datapackage(dictitem["games"])
+                                    datapackage=json.loads(datapackagestr)
+                                    await  websocket.send(datapackagestr)
+                                    print(f"datapackage command sent with {datapackagestr}")
+                                case "DataPackage":
+                                    uuidstr:str = str(player_uuid)
+                                    if needsPassword:
+                                        connection_packet: str = make_connection_packet(uuidstr,
+                                                                                        settings_dict["username"],
+                                                                                        settings_dict["password"])
+                                    else:connection_packet:str = make_connection_packet(uuidstr,
+                                                                                        settings_dict["username"],)
+                                    await websocket.send(connection_packet)
+                                    print(f"Connection packet sent = {connection_packet}")
+                                case "Connected":
+                                    team=dictitem["team"]
+                                    slot=dictitem["slot"]
 
-                            if dictitem["cmd"] == "PrintJSON": #the server sends printjson for the majority of stuff. all the things i need is here
-                                if "type" in dictitem:
-                                    if dictitem["type"] == "Countdown": #check for the countdown
-                                            if dictitem["countdown"] == 0: #checks if it is 0 (will for some reason error if it is with the other when type is not equal to countdown)
-                                                if settings_dict["speedrunType"] == "OSR": #the linux side of things
-                                                    timer_connectors.send_osr_command("start",
-                                                                                      settings_dict["openSpeedrunSocket"])
-                                                else:
-                                                    timer_connectors.send_livesplit_command("starttimer", #the windows side of things
-                                                                                            settings_dict["livesplitHost"],
-                                                                                            int(settings_dict[
-                                                                                                    "livesplitPort"]))
-                                    if dictitem["type"] == "Goal": #checks if someone has goaled
-                                        if settings_dict["SplitOnAllGoals"]:
-                                            if dictitem["team"] == team: #coppy paste job
-                                                if settings_dict["speedrunType"] == "OSR": #linux
-                                                    timer_connectors.send_osr_command("split",
-                                                                                      settings_dict["openSpeedrunSocket"])
-                                                else:#windows
-                                                    timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
-                                        else:
-                                            if dictitem["team"] == team and dictitem["slot"] == slot: #checks the team and slot. yet again errors if this isnt the goal type
-                                                if settings_dict["speedrunType"] == "OSR": #linux
-                                                    timer_connectors.send_osr_command("split",
-                                                                                      settings_dict["openSpeedrunSocket"])
-                                                else:#windows
-                                                    timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
+
+
+                            #old code. replaiced with a match statemnt
+                            #if dictitem["cmd"] == "RoomInfo": #waiting for the first message. this is required to actually connect
+                            #    uuidstr:str = str(player_uuid)
+                            #    if dictitem["password"]:
+                            #        connection_packet:str = make_connection_packet(uuidstr, settings_dict["username"],
+                            #                                                   settings_dict["password"])
+                            #    else:
+                            #        connection_packet:str = make_connection_packet(uuidstr,
+                            #                                                   settings_dict["username"],)
+                            #    await websocket.send(connection_packet)
+                            #    print(f"connection packet sent = {connection_packet}")
+                            #if dictitem["cmd"] == "Connected": #hey i am actually connected everything is good!. get the team and slot numbers and put them in
+                            #    team=dictitem["team"]
+                            #    slot=dictitem["slot"]
+                            #
+                            #if dictitem["cmd"] == "PrintJSON": #the server sends printjson for the majority of stuff. all the things i need is here
+                            #    if "type" in dictitem:
+                            #        if dictitem["type"] == "Countdown": #check for the countdown
+                            #                if dictitem["countdown"] == 0: #checks if it is 0 (will for some reason error if it is with the other when type is not equal to countdown)
+                            #                    if settings_dict["speedrunType"] == "OSR": #the linux side of things
+                            #                        timer_connectors.send_osr_command("start",
+                            #                                                          settings_dict["openSpeedrunSocket"])
+                            #                    else:
+                            #                        timer_connectors.send_livesplit_command("starttimer", #the windows side of things
+                            #                                                                settings_dict["livesplitHost"],
+                            #                                                                int(settings_dict[
+                            #                                                                        "livesplitPort"]))
+                            #        if dictitem["type"] == "Goal": #checks if someone has goaled
+                            #            if settings_dict["SplitOnAllGoals"]:
+                            #                if dictitem["team"] == team: #coppy paste job
+                            #                    if settings_dict["speedrunType"] == "OSR": #linux
+                            #                        timer_connectors.send_osr_command("split",
+                            #                                                          settings_dict["openSpeedrunSocket"])
+                            #                    else:#windows
+                            #                        timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
+                            #            else:
+                            #                if dictitem["team"] == team and dictitem["slot"] == slot: #checks the team and slot. yet again errors if this isnt the goal type
+                            #                    if settings_dict["speedrunType"] == "OSR": #linux
+                            #                        timer_connectors.send_osr_command("split",
+                            #                                                          settings_dict["openSpeedrunSocket"])
+                            #                    else:#windows
+                            #                        timer_connectors.send_livesplit_command("split",settings_dict["livesplitHost"],int(settings_dict["livesplitPort"]))
                 finally:
                     try:
                         watcher
