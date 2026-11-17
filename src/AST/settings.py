@@ -76,7 +76,10 @@ def save_setting_to_json(setting: str,  json_data:dict, value:Any, file_path: Pa
         return json_data #added this to stop a warning.
 
 
-def save_json_file(json_dict:dict, file_path:Path) -> None: #saves the json file
+def save_json_file(json_dict:dict, file_path:Path|None = None) -> None: #saves the json file
+    if file_path is None:
+        base_file_path: Path = user_config_path(appname="Archipelago Speedrun Splitter", appauthor="Kazii")
+        file_path = base_file_path / "connection.json"
     if not file_path.is_file():
         file_path.parent.mkdir(parents=True,exist_ok=True)
     with open(file_path,"w",encoding="utf_8") as file:
