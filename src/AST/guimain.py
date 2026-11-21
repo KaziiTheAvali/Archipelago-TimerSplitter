@@ -77,7 +77,16 @@ app:tkinter.Tk = tk.Tk()
 app.title("Archipelago Speedrun Splitter GUI")
 app.geometry("500x500")
 
-connection_frame_top: tkinter.Frame = tk.Frame(app)
+notebook:ttk.Notebook = ttk.Notebook(app)
+notebook.pack(expand=True,fill="both", padx=10, pady=10)
+
+tabSettings:ttk.Frame = ttk.Frame(notebook)
+tabItemSplits:ttk.Frame = ttk.Frame(notebook)
+
+notebook.add(tabSettings, text="Settings")
+notebook.add(tabItemSplits, text="Split on Items")
+
+connection_frame_top: tkinter.Frame = tk.Frame(tabSettings)
 connection_frame_top.columnconfigure(0,weight=1)
 connection_frame_top.pack(fill="x",side="top",pady=(10,0),anchor="n")
 
@@ -105,7 +114,7 @@ for i, text in enumerate(connection_labels):
     connection_entry.insert(0, current_connection_settings[i])
     connection_fields.append(connection_entry),
 
-timer_options_result_frame:tkinter.Frame = tk.Frame(app)
+timer_options_result_frame:tkinter.Frame = tk.Frame(tabSettings)
 timer_options_result_frame.pack(fill="x",side="top",pady=10,anchor="w")
 
 timer_options:list[str] =["Open Speed Run","Livesplit"]
@@ -117,7 +126,7 @@ split_on_all_goals_var:tkinter.BooleanVar=tk.BooleanVar(value=current_settings["
 split_on_all_goals_checkbox:tkinter.Checkbutton=tk.Checkbutton(timer_options_result_frame,text="Split when anyone goals",variable=split_on_all_goals_var)
 split_on_all_goals_checkbox.pack(side=tk.LEFT)
 
-timer_connection_frame_top: tkinter.Frame = tk.Frame(app)
+timer_connection_frame_top: tkinter.Frame = tk.Frame(tabSettings)
 timer_connection_frame_top.columnconfigure(0,weight=1)
 timer_connection_frame_top.pack(fill="x",side="top",pady=(10,0),anchor="n")
 
@@ -162,7 +171,7 @@ stop_btn.pack(side=tk.LEFT)
 konsol_label:tkinter.Label=tk.Label(buttons_frame,text="LogBox",font=("Arial", 10, "bold"))
 konsol_label.pack(side="bottom", pady=(0,5))
 
-logbox:tkinter.Text = tk.Text(app,wrap=tk.WORD)
+logbox:tkinter.Text = tk.Text(app,height=1,wrap=tk.WORD)
 logbox.pack(fill=tk.BOTH,expand=True)
 
 stop_event = threading.Event()

@@ -2,7 +2,9 @@ import ssl
 import subprocess
 import sys
 from asyncio import Task, AbstractEventLoop
+from pathlib import Path
 
+from platformdirs import user_config_path
 from websockets.client import ClientConnection #this was an auto import. probably not needed. thanks fucking pycharm
 
 import settings
@@ -17,6 +19,39 @@ import argparse
 import json
 import os
 
+def split_timers(settings_dict:dict) -> None:
+    if settings_dict["speedrunType"] == "OSR":
+        timer_connectors.send_osr_command("split", settings_dict["openSpeedrunSocket"])
+    else:
+        timer_connectors.send_livesplit_command("split", settings_dict["livesplitHost"], settings_dict["livesplitPort"])
+
+def goal_split(settings_dict:dict,message_dict:dict,team:int,slot:int) -> None:
+    if settings_dict["SplitOnAllGoals"]:
+        if message_dict["team"]==team:
+            split_timers(settings_dict)
+    elif message_dict["team"]==team and message_dict["slot"]==slot:
+        split_timers(settings_dict)
+
+def countdown_split(countdown:int,settings_dict:dict) -> None:
+    if countdown == 0:
+        split_timers(settings_dict)
+
+def find_slot(playername:str):
+
+    ...
+
+def make_slot_mappings(slot_info:dict) -> dict:
+    slot_mappings:dict={}
+    print (slot_info)
+    #
+    for slot , info in slot_info.items():
+        temp_mapping:dict = {"slot_number": slot, "name": info["name"], "game": info["game"]}
+        print(f"slot {slot} info {info}")
+        print(temp_mapping)
+        slot_mappings[slot] = temp_mapping
+
+    print(f"slot mappings{slot_mappings}")
+    return slot_mappings
 
 def make_connection_packet(player_uuid:str,name:str,password:str|None=None) -> str: #this makes the package that is sent to the server when connecting
     version:dict=special_types.version #gets the version from specal_types. that file name should be changed because its not really types but shh
@@ -73,8 +108,9 @@ async def _watch_for_stop_event(stop_event:threading.Event,websocket):
 
 async def websocket_loop(server:str,port:str|int,settings_dict:dict,stop_event:threading.Event | bool=True) -> None:
     port=str(port)
-    needsPassword:bool=False
+    needs_password:bool=False
     datapackage:dict={}
+    slot_mappings:dict={}
     full_uri:str="wss://" + server +":"+ port #default is secure.
     player_uuid=uuid.uuid4() #i never knew what the intended uuid thing was so just gen this shit
     secure:bool=True
@@ -96,6 +132,7 @@ async def websocket_loop(server:str,port:str|int,settings_dict:dict,stop_event:t
                         data:list = json.loads(message) #this just makes it useable
                         for dictitem in data:
                             command:str=dictitem["cmd"]
+                            type:str=dictitem["type"]
                             match command:
                                 case "RoomInfo":
                                     needs_password=dictitem["password"]
@@ -105,7 +142,8 @@ async def websocket_loop(server:str,port:str|int,settings_dict:dict,stop_event:t
                                     print(f"datapackage command sent with {datapackagestr}")
                                 case "DataPackage":
                                     uuidstr:str = str(player_uuid)
-                                    if needsPassword:
+                                    datapackage=dictitem["data"]
+                                    if needs_password:
                                         connection_packet: str = make_connection_packet(uuidstr,
                                                                                         settings_dict["username"],
                                                                                         settings_dict["password"])
@@ -116,6 +154,20 @@ async def websocket_loop(server:str,port:str|int,settings_dict:dict,stop_event:t
                                 case "Connected":
                                     team=dictitem["team"]
                                     slot=dictitem["slot"]
+                                    slot_info:dict=dictitem["slot_info"]
+                                    slot_mappings=make_slot_mappings(slot_info)
+                                case "PrintJSON":
+                                    if type:
+                                        match type:
+                                            case "Countdown":
+                                                countdown_split(dictitem["countdown"],settings_dict)
+                                            case "Goal":
+                                                goal_split(settings_dict,dictitem,team,slot)
+
+
+
+
+
 
 
 
@@ -183,7 +235,7 @@ async def websocket_loop(server:str,port:str|int,settings_dict:dict,stop_event:t
                 else:
                     full_uri: str = "wss://" + server + ":" + port
                     secure = True
-        except (websockets.ConnectionClosed):
+        except websockets.ConnectionClosed:
             print("close connection")
         except (websockets.ConnectionClosedError, OSError) as error:
 
